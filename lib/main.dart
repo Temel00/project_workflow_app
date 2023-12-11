@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Project Workflow',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -40,7 +40,9 @@ class MyApp extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             // User is signed in, show Home Screen
-            return HomeScreen(displayName: snapshot.data!.displayName!);
+            return HomeScreen(
+                displayName: snapshot.data!.displayName!,
+                uuid: snapshot.data!.uid);
           } else {
             // User is not signed in, show Login Screen
             return LoginScreen();

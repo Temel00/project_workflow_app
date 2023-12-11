@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import '../services/firebase_service.dart';
 
 class HomeScreen extends StatelessWidget {
-  final String displayName;
-  const HomeScreen({super.key, required this.displayName});
+  final String displayName, uuid;
+  const HomeScreen({super.key, required this.displayName, required this.uuid});
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +20,19 @@ class HomeScreen extends StatelessWidget {
             height: 20,
           ),
           const ElevatedButton(onPressed: signOut, child: Text("Sign Out")),
+          const SizedBox(
+            height: 20,
+          ),
+          Row(
+            children: [
+              const Text("Press to right to get data"),
+              ElevatedButton(
+                  onPressed: () {
+                    getName(uuid);
+                  },
+                  child: const Text("Click"))
+            ],
+          ),
         ],
       )),
     );
