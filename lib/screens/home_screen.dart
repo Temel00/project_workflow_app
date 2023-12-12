@@ -28,7 +28,7 @@ class HomeScreen extends StatelessWidget {
               const Text("Press to right to get data"),
               ElevatedButton(
                   onPressed: () {
-                    getName(uuid);
+                    getProjects(uuid);
                   },
                   child: const Text("Click"))
             ],
