@@ -104,20 +104,8 @@ class Project {
 // Create root Firestore instance
 var db = FirebaseFirestore.instance;
 
-// Method to get Name of projects
-Future<void> getName(String uuid) async {
-  await db.collection("projects").where("user", isEqualTo: uuid).get().then(
-    (querySnapshot) {
-      debugPrint("Successfully completed");
-      for (var docSnapshot in querySnapshot.docs) {
-        debugPrint('${docSnapshot.id} => ${docSnapshot.data()}');
-      }
-    },
-    onError: (e) => debugPrint("Error completing: $e"),
-  );
-}
-
-Future<void> getProjects(String uuid) async {
+// Method to get projects with user
+Future<List<Project>?> getProjects(String uuid) async {
   var currentProjects = <Project>[];
   var currentProject = Project();
   await db
@@ -136,14 +124,9 @@ Future<void> getProjects(String uuid) async {
         currentProject = docSnapshot.data();
         currentProjects.add(currentProject);
       }
-      var ts = currentProjects.first.tasks;
-      if (ts != null) {
-        for (var task in ts) {
-          debugPrint("Task name: ${task.tname}");
-          debugPrint("Task milestone: ${task.milestone}");
-        }
-      }
+      return currentProjects;
     },
     onError: (e) => debugPrint("Error getting projects: $e"),
   );
+  return currentProjects;
 }
