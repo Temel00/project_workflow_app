@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:project_workflow_app/screens/project_details_screen.dart';
 import 'package:project_workflow_app/screens/project_add_screen.dart';
@@ -25,13 +26,19 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         Flexible(
-          child: FutureBuilder(
-            future: getProjects(uuid),
+          child: StreamBuilder<QuerySnapshot>(
+            stream: getProjects(uuid),
             builder: (context, result) {
               if (result.hasError) {
-                return Text("error in future builder");
-              } else if (result.connectionState == ConnectionState.done) {
-                List<Project> data = result.data as List<Project>;
+                return const Text("error in stream builder");
+              } else if (!result.hasData) {
+                return const CircularProgressIndicator();
+              } else {
+                final data = result.data!.docs
+                    .map((doc) => Project.fromFirestore(
+                        doc as QueryDocumentSnapshot<Map<String, dynamic>>,
+                        SnapshotOptions()))
+                    .toList();
 
                 return ListView.builder(
                   itemCount: data.length,
@@ -39,29 +46,22 @@ class HomeScreen extends StatelessWidget {
                     return ListTile(
                       title: Text("${data[index].name}"),
                       onTap: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  ProjectDetailsScreen(project: data[index]),
-                            ));
+                        Navigator.pushNamed(
+                          context,
+                          "/details",
+                          arguments: data[index],
+                        );
                       },
                     );
                   },
                 );
-              } else {
-                return const CircularProgressIndicator();
               }
             },
           ),
         ),
       ]),
       floatingActionButton: FloatingActionButton(onPressed: () {
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ProjectAddScreen(),
-            ));
+        Navigator.pushNamed(context, '/add', arguments: uuid);
       }),
     );
   }

@@ -24,27 +24,31 @@ Future<void> signOut() async {
 }
 
 // FIREBASE FIRESTORE
+
 // Creating task object for use in Projects
 class Task {
   final String? tname;
   final String? milestone;
 
+  factory Task.fromFirestore(Map<String, dynamic> data) {
+    return Task(
+      tname: data['tname'],
+      milestone: data['milestone'],
+    );
+  }
+
+  /// Add a toFirestore method to convert Task object to a Map
+  Map<String, dynamic> toFirestore() {
+    return {
+      "tname": tname,
+      "milestone": milestone,
+    };
+  }
+
   Task({
     this.tname,
     this.milestone,
   });
-
-  factory Task.fromMap(
-    Map<String, dynamic> data,
-  ) {
-    return Task(tname: data['tname'], milestone: data['milestone']);
-  }
-  Map<String, dynamic> toMap() {
-    return {
-      'tname': tname,
-      'milestone': milestone,
-    };
-  }
 }
 
 // Creating Project object to convert Firebase data
@@ -56,6 +60,8 @@ class Project {
   final String? goal;
   final List<String>? milestones;
   final List<Task>? tasks;
+  final String? user;
+  final String? id;
 
   Project({
     this.name,
@@ -65,16 +71,15 @@ class Project {
     this.goal,
     this.milestones,
     this.tasks,
+    this.user,
+    this.id,
   });
 
   // Convert data to and from Firestore and into Project objects
   factory Project.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot,
       SnapshotOptions? options) {
     final data = snapshot.data();
-    var currentTasks = data?['tasks'].map((i) {
-      var z = Map<String, dynamic>.from(i);
-      return Task.fromMap(z);
-    }).toList();
+
     return Project(
       name: data?['name'],
       problem: data?['problem'],
@@ -84,7 +89,13 @@ class Project {
       milestones: data?['milestones'] is Iterable
           ? List.from(data?['milestones'])
           : null,
-      tasks: List<Task>.from(currentTasks),
+      tasks: data?['tasks'] is Iterable
+          ? List.from(data?['tasks'])
+              .map((taskData) => Task.fromFirestore(taskData))
+              .toList()
+          : null,
+      user: data?['user'],
+      id: data?['id'],
     );
   }
 
@@ -96,7 +107,10 @@ class Project {
       if (size != null) "size": size,
       if (goal != null) "goal": goal,
       if (milestones != null) "milestones": milestones,
-      if (tasks != null) "tasks": tasks,
+      if (tasks != null)
+        "tasks": tasks!.map((task) => task.toFirestore()).toList(),
+      if (user != null) "user": user,
+      if (id != null) "id": id,
     };
   }
 }
@@ -105,28 +119,77 @@ class Project {
 var db = FirebaseFirestore.instance;
 
 // Method to get projects with user
-Future<List<Project>?> getProjects(String uuid) async {
-  var currentProjects = <Project>[];
-  var currentProject = Project();
-  await db
-      .collection("projects")
-      .where("user", isEqualTo: uuid)
-      .withConverter(
-        fromFirestore: Project.fromFirestore,
-        toFirestore: (Project project, _) => project.toFirestore(),
-      )
-      .get()
-      .then(
-    (querySnapshot) {
-      debugPrint("Successfully got projects");
-      for (var docSnapshot in querySnapshot.docs) {
-        debugPrint('${docSnapshot.id} => ${docSnapshot.data()}');
-        currentProject = docSnapshot.data();
-        currentProjects.add(currentProject);
-      }
-      return currentProjects;
-    },
-    onError: (e) => debugPrint("Error getting projects: $e"),
-  );
-  return currentProjects;
+Stream<QuerySnapshot> getProjects(String uuid) async* {
+  yield* db.collection("projects").where("user", isEqualTo: uuid).snapshots();
+}
+
+// // Method to get projects with user
+// Future<List<Project>?> getProjects(String uuid) async {
+//   var currentProjects = <Project>[];
+//   var currentProject = Project();
+//   await db
+//       .collection("projects")
+//       .where("user", isEqualTo: uuid)
+//       .withConverter(
+//         fromFirestore: Project.fromFirestore,
+//         toFirestore: (Project project, _) => project.toFirestore(),
+//       )
+//       .get()
+//       .then(
+//     (querySnapshot) {
+//       debugPrint("Successfully got projects");
+//       for (var docSnapshot in querySnapshot.docs) {
+//         debugPrint('${docSnapshot.id} => ${docSnapshot.data()}');
+//         currentProject = docSnapshot.data();
+//         currentProjects.add(currentProject);
+//       }
+//       return currentProjects;
+//     },
+//     onError: (e) => debugPrint("Error getting projects: $e"),
+//   );
+//   return currentProjects;
+// }
+
+// Method to add projects with user
+Future<void> addProject(Project proj) async {
+  late DocumentReference docRef;
+  if (proj.id == null || proj.id == "") {
+    docRef = db
+        .collection("projects")
+        .withConverter(
+          fromFirestore: Project.fromFirestore,
+          toFirestore: (Project project, _) => project.toFirestore(),
+        )
+        .doc();
+    var newProj = Project(
+        name: proj.name,
+        problem: proj.problem,
+        description: proj.description,
+        size: proj.size,
+        goal: proj.goal,
+        user: proj.user,
+        milestones: proj.milestones,
+        tasks: proj.tasks,
+        id: docRef.id);
+
+    await docRef.set(newProj);
+  } else {
+    debugPrint("Project tasks: ${proj.tasks}");
+    docRef = db
+        .collection("projects")
+        .withConverter(
+          fromFirestore: Project.fromFirestore,
+          toFirestore: (Project project, _) => project.toFirestore(),
+        )
+        .doc(proj.id);
+
+    await docRef.set(proj);
+  }
+}
+
+Future<void> deleteProject(Project proj) async {
+  await db.collection("projects").doc(proj.id).delete().then(
+        (doc) => debugPrint("Document deleted"),
+        onError: (e) => debugPrint("Error updating document $e"),
+      );
 }

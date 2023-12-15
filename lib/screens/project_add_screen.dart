@@ -9,17 +9,72 @@ class ProjectAddScreen extends StatefulWidget {
 }
 
 class _ProjectAddScreenState extends State<ProjectAddScreen> {
-  final _formKey = GlobalKey<FormState>();
+  final _addFormKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
   final problemController = TextEditingController();
   final descriptionController = TextEditingController();
+  double _value = 0;
+  String _status = 'sm';
+  Color _statusColor = Colors.lightBlue;
+  String _dropdownValue = "Patentable Idea";
+
+  void sliderCallback(double? value) {
+    setState(() {
+      _value = value as double;
+      switch (value) {
+        case 0:
+          {
+            _status = 'sm';
+            _statusColor = Colors.lightBlue;
+            break;
+          }
+        case 1:
+          {
+            _status = 'md';
+            _statusColor = Colors.yellow;
+            break;
+          }
+        case 2:
+          {
+            _status = 'lg';
+            _statusColor = Colors.orange;
+            break;
+          }
+        case 3:
+          {
+            _status = 'xl';
+            _statusColor = Colors.green;
+            break;
+          }
+        default:
+          {
+            break;
+          }
+      }
+    });
+  }
+
+  void dropdownCallback(String? selectedValue) {
+    if (selectedValue is String) {}
+    setState(() {
+      _dropdownValue = selectedValue as String;
+    });
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    problemController.dispose();
+    descriptionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(title: Text("Project Details")),
+        appBar: AppBar(title: const Text("Add Project")),
         body: Form(
-          key: _formKey,
+          key: _addFormKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -62,19 +117,93 @@ class _ProjectAddScreenState extends State<ProjectAddScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Project Size",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  Text(
+                    _status,
+                    style: TextStyle(color: _statusColor),
+                  ),
+                  Slider(
+                    min: 0,
+                    max: 3,
+                    value: _value,
+                    divisions: 3,
+                    onChanged: sliderCallback,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Project Goal",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  DropdownButton(
+                      value: _dropdownValue,
+                      items: [
+                        DropdownMenuItem(
+                            value: "Patentable Idea",
+                            child: Text(
+                              "Patentable Idea",
+                              style:
+                                  TextStyle(backgroundColor: Colors.green[100]),
+                            )),
+                        DropdownMenuItem(
+                            value: "Personal Goal",
+                            child: Text(
+                              "Personal Goal",
+                              style:
+                                  TextStyle(backgroundColor: Colors.blue[100]),
+                            )),
+                        DropdownMenuItem(
+                            value: "Learning",
+                            child: Text(
+                              "Learning",
+                              style:
+                                  TextStyle(backgroundColor: Colors.pink[100]),
+                            )),
+                      ],
+                      onChanged: dropdownCallback)
+                ],
+              ),
+              const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: ElevatedButton(
                   onPressed: () {
                     // Validate returns true if the form is valid, or false otherwise.
-                    if (_formKey.currentState!.validate()) {
+                    if (_addFormKey.currentState!.validate()) {
                       // If the form is valid, display a snackbar. In the real world,
                       // you'd often call a server or save the information in a database.
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Processing Data')),
+                        const SnackBar(content: Text('Adding Data')),
                       );
                       debugPrint(
                           "Name: ${nameController.text}, Problem: ${problemController.text}, Desc: ${descriptionController.text}");
+
+                      addProject(
+                        Project(
+                          name: nameController.text,
+                          problem: problemController.text,
+                          description: descriptionController.text,
+                          size: _status,
+                          goal: _dropdownValue,
+                          user: ModalRoute.of(context)?.settings.arguments
+                              as String,
+                          milestones: [],
+                          tasks: [],
+                        ),
+                      );
+
+                      Navigator.pop(context);
                     }
                   },
                   child: const Text('Submit'),
