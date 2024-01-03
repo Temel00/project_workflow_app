@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import '../services/firebase_service.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
@@ -111,30 +110,47 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    List<String> milestones = _currentProj.milestones as List<String>;
+    // Create Milestone rows
+    List<Milestone> milestones = _currentProj.milestones as List<Milestone>;
     var milestoneRows = <Row>[];
     for (var milestone in milestones) {
+      List<Task> tasks = milestone.tasks as List<Task>;
+      var taskRows = <Column>[];
+      for (var task in tasks) {
+        var newTask = Column(
+          children: [Text("${task.tname}")],
+        );
+        taskRows.add(newTask);
+      }
       var newRow = Row(
-        children: [Text(milestone), const Icon(Icons.collections_bookmark)],
+        children: [
+          Text("${milestone.mname}"),
+          const Icon(Icons.collections_bookmark),
+          Column(
+            children: taskRows,
+          )
+        ],
       );
       milestoneRows.add(newRow);
     }
 
-    List<Task> tasks = _currentProj.tasks as List<Task>;
-    var taskRows = <Row>[];
-    for (var task in tasks) {
-      var newTask = Row(
-        children: [
-          const Icon(Icons.check_box_outline_blank),
-          Text("${task.tname}"),
-          const SizedBox(
-            width: 20,
-          ),
-          Text("${task.milestone}"),
-        ],
-      );
-      taskRows.add(newTask);
-    }
+    // // Create Task rows
+    // List<Task> tasks = _currentProj.milestones as List<Task>;
+
+    // var taskRows = <Row>[];
+    // for (var task in tasks) {
+    //   var newTask = Row(
+    //     children: [
+    //       const Icon(Icons.check_box_outline_blank),
+    //       Text("${task.tname}"),
+    //       const SizedBox(
+    //         width: 20,
+    //       ),
+    //       Text("${task.tname}"),
+    //     ],
+    //   );
+    //   taskRows.add(newTask);
+    // }
 
     return Scaffold(
       appBar: AppBar(
@@ -180,7 +196,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                           size: _status,
                           goal: _dropdownValue,
                           milestones: milestones,
-                          tasks: tasks,
                           user: _currentProj.user,
                           id: _currentProj.id,
                         );
@@ -354,12 +369,63 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               Column(
                 children: milestoneRows,
               ),
+              if (_isEditting)
+                ElevatedButton(
+                    onPressed: () => showDialog<String>(
+                          context: context,
+                          builder: (BuildContext context) => Dialog(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      debugPrint("Dialog Add Pressed");
+                                      final newMilestone = Milestone(
+                                          mname: 'Milestone 1',
+                                          tasks: [
+                                            Task(
+                                                tname: 'Task 1',
+                                                isComplete: false),
+                                            Task(
+                                                tname: 'Task 2',
+                                                isComplete: false)
+                                          ]);
+                                      addMilestone(_currentProj, newMilestone)
+                                          .then((x) => {
+                                                Navigator.pop(context),
+                                                Navigator.pop(context, true),
+                                              });
+
+                                      // milestones.add(Milestone(mname: "Test1"));
+                                      // _currentProj.milestones = milestones;
+                                      // addProject(_currentProj).then((x) => {});
+                                      // bool isUpdated = false;
+                                      // deleteProject(_currentProj).then((x) => {
+                                      //       isUpdated = true,
+                                      //       Navigator.pop(context),
+                                      //       Navigator.pop(context, isUpdated)
+                                      //     });
+                                    },
+                                    child: const Text("Add Milestone"),
+                                  ),
+                                  const SizedBox(height: 15),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text('Close'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    child: const Text("+ milestone")),
               const SizedBox(
                 height: 20,
-              ),
-              const Text("Tasks"),
-              Column(
-                children: taskRows,
               ),
               const SizedBox(height: 10),
               if (_isEditting)
@@ -383,7 +449,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                       Navigator.pop(context, isUpdated)
                                     });
                               },
-                              child: Text("Delete"),
+                              child: const Text("Delete"),
                             ),
                             const SizedBox(height: 15),
                             TextButton(

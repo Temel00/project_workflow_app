@@ -25,15 +25,76 @@ Future<void> signOut() async {
 
 // FIREBASE FIRESTORE
 
+// Create all the database object classes
+// Creating the ProjectId object for use in Owners
+class ProjectId {
+  final String? pname;
+  final String? projectId;
+
+  ProjectId({this.pname, this.projectId});
+
+  factory ProjectId.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> snapshot,
+    SnapshotOptions? options,
+  ) {
+    final data = snapshot.data();
+    return ProjectId(pname: data?['pname'], projectId: data?['projectId']);
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      if (pname != null) "pname": pname,
+      if (projectId != null) "projectId": projectId,
+    };
+  }
+}
+
+// Creating the owners object for use in Owners
+
+class Owner {
+  final String uuid;
+  final List<ProjectId>? projectIds;
+
+  Owner({required this.uuid, this.projectIds});
+
+  factory Owner.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot,
+      SnapshotOptions? options) {
+    final data = snapshot.data();
+
+    return Owner(
+      uuid: data?['uuid'],
+      projectIds: data?['projectIds'] is Iterable
+          ? List.from(data?['projectIds'])
+              .map((projectIdData) =>
+                  ProjectId.fromFirestore(projectIdData, options))
+              .toList()
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      "uuid": uuid,
+      "projectIds": projectIds,
+    };
+  }
+}
+
 // Creating task object for use in Projects
 class Task {
   final String? tname;
-  final String? milestone;
+  final bool? isComplete;
+
+  Task({
+    this.tname,
+    this.isComplete,
+  });
 
   factory Task.fromFirestore(Map<String, dynamic> data) {
+    // debugPrint("Returning Task: ${data["tname"]} and ${data["isComplete"]}.");
     return Task(
-      tname: data['tname'],
-      milestone: data['milestone'],
+      tname: data['tname'] as String,
+      isComplete: data['isComplete'] as bool,
     );
   }
 
@@ -41,14 +102,37 @@ class Task {
   Map<String, dynamic> toFirestore() {
     return {
       "tname": tname,
-      "milestone": milestone,
+      "isComplete": isComplete,
     };
   }
+}
 
-  Task({
-    this.tname,
-    this.milestone,
+class Milestone {
+  final String? mname;
+  final List<Task>? tasks;
+
+  Milestone({
+    this.mname,
+    this.tasks,
   });
+
+  factory Milestone.fromFirestore(Map<String, dynamic> data) {
+    // debugPrint("Returning Task: ${data["mname"]} and ${data["tasks"]}.");
+    return Milestone(
+      mname: data['mname'] as String,
+      tasks: (data['tasks'] as List? ?? [])
+          .map((taskData) => Task.fromFirestore(taskData))
+          .toList(),
+    );
+  }
+
+  /// Add a toFirestore method to convert Task object to a Map
+  Map<String, dynamic> toFirestore() {
+    return {
+      "mname": mname,
+      "tasks": tasks?.map((task) => task.toFirestore()).toList(),
+    };
+  }
 }
 
 // Creating Project object to convert Firebase data
@@ -58,8 +142,8 @@ class Project {
   final String? description;
   final String? size;
   final String? goal;
-  final List<String>? milestones;
-  final List<Task>? tasks;
+  final List<Milestone>? milestones;
+
   final String? user;
   final String? id;
 
@@ -70,7 +154,6 @@ class Project {
     this.size,
     this.goal,
     this.milestones,
-    this.tasks,
     this.user,
     this.id,
   });
@@ -80,20 +163,17 @@ class Project {
       SnapshotOptions? options) {
     final data = snapshot.data();
 
+    // debugPrint("This is the data in Project.fromFirestore: ${data}");
+
     return Project(
-      name: data?['name'],
+      name: data?['name'] as String,
       problem: data?['problem'],
       description: data?['description'],
       size: data?['size'],
       goal: data?['goal'],
-      milestones: data?['milestones'] is Iterable
-          ? List.from(data?['milestones'])
-          : null,
-      tasks: data?['tasks'] is Iterable
-          ? List.from(data?['tasks'])
-              .map((taskData) => Task.fromFirestore(taskData))
-              .toList()
-          : null,
+      milestones: (data?['milestones'] as List? ?? [])
+          .map((milestoneData) => Milestone.fromFirestore(milestoneData))
+          .toList(),
       user: data?['user'],
       id: data?['id'],
     );
@@ -107,8 +187,6 @@ class Project {
       if (size != null) "size": size,
       if (goal != null) "goal": goal,
       if (milestones != null) "milestones": milestones,
-      if (tasks != null)
-        "tasks": tasks!.map((task) => task.toFirestore()).toList(),
       if (user != null) "user": user,
       if (id != null) "id": id,
     };
@@ -118,37 +196,44 @@ class Project {
 // Create root Firestore instance
 var db = FirebaseFirestore.instance;
 
+// Method to get user's owner document
+Stream<QuerySnapshot> getOwners(String uuid) async* {
+  yield* db.collection("owners").where("user", isEqualTo: uuid).snapshots();
+}
+
 // Method to get projects with user
 Stream<QuerySnapshot> getProjects(String uuid) async* {
   yield* db.collection("projects").where("user", isEqualTo: uuid).snapshots();
 }
 
-// // Method to get projects with user
-// Future<List<Project>?> getProjects(String uuid) async {
-//   var currentProjects = <Project>[];
-//   var currentProject = Project();
-//   await db
-//       .collection("projects")
-//       .where("user", isEqualTo: uuid)
-//       .withConverter(
-//         fromFirestore: Project.fromFirestore,
-//         toFirestore: (Project project, _) => project.toFirestore(),
-//       )
-//       .get()
-//       .then(
-//     (querySnapshot) {
-//       debugPrint("Successfully got projects");
-//       for (var docSnapshot in querySnapshot.docs) {
-//         debugPrint('${docSnapshot.id} => ${docSnapshot.data()}');
-//         currentProject = docSnapshot.data();
-//         currentProjects.add(currentProject);
-//       }
-//       return currentProjects;
-//     },
-//     onError: (e) => debugPrint("Error getting projects: $e"),
-//   );
-//   return currentProjects;
-// }
+Future<bool> projectExists(String projectId, String user) async {
+  final ownerDoc = await db.collection("owners").doc(user).get();
+  final projectList = ownerDoc.data()!["projectIds"] as List<ProjectId>;
+  return projectList.any((map) => "projectId" == projectId);
+}
+
+Future<void> addMilestone(Project proj, Milestone milestone) async {
+  try {
+    final reference = db.collection("projects").doc(proj.id);
+
+    List<Milestone> currentMilestones =
+        (await reference.get()).data()?['milestones'] is Iterable
+            ? List.from(
+                (await reference.get()).data()?['milestones'],
+              )
+                .map((milestoneData) => Milestone.fromFirestore(milestoneData))
+                .toList()
+            : [];
+
+    currentMilestones.add(milestone);
+
+    await reference.update({
+      'milestones': currentMilestones.map((m) => m.toFirestore()).toList(),
+    });
+  } catch (error) {
+    debugPrint('Error adding milestone: $error');
+  }
+}
 
 // Method to add projects with user
 Future<void> addProject(Project proj) async {
@@ -169,12 +254,10 @@ Future<void> addProject(Project proj) async {
         goal: proj.goal,
         user: proj.user,
         milestones: proj.milestones,
-        tasks: proj.tasks,
         id: docRef.id);
 
     await docRef.set(newProj);
   } else {
-    debugPrint("Project tasks: ${proj.tasks}");
     docRef = db
         .collection("projects")
         .withConverter(

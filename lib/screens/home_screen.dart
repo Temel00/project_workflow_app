@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:project_workflow_app/screens/project_details_screen.dart';
-import 'package:project_workflow_app/screens/project_add_screen.dart';
 import '../services/firebase_service.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -30,13 +28,13 @@ class HomeScreen extends StatelessWidget {
             stream: getProjects(uuid),
             builder: (context, result) {
               if (result.hasError) {
-                return const Text("error in stream builder");
+                return const Text("Error getting your projects");
               } else if (!result.hasData) {
                 return const CircularProgressIndicator();
               } else {
                 final data = result.data!.docs
                     .map((doc) => Project.fromFirestore(
-                        doc as QueryDocumentSnapshot<Map<String, dynamic>>,
+                        doc as DocumentSnapshot<Map<String, dynamic>>,
                         SnapshotOptions()))
                     .toList();
 

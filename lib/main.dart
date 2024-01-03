@@ -3,7 +3,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:project_workflow_app/screens/project_add_screen.dart';
 import 'package:project_workflow_app/screens/project_details_screen.dart';
-import 'package:project_workflow_app/services/firebase_service.dart';
 import 'firebase_options.dart';
 import './screens/home_screen.dart';
 import './screens/login_screen.dart';

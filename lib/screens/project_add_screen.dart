@@ -199,7 +199,6 @@ class _ProjectAddScreenState extends State<ProjectAddScreen> {
                           user: ModalRoute.of(context)?.settings.arguments
                               as String,
                           milestones: [],
-                          tasks: [],
                         ),
                       );
 
