@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project_workflow_app/widgets/milestone_widget.dart';
 import '../services/firebase_service.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
@@ -19,6 +20,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   late Color _statusColor;
   late String _dropdownValue;
   late Project _currentProj;
+  late List<Milestone> _currentMilestones;
 
   @override
   void initState() {
@@ -33,6 +35,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     problemController.text = _currentProj.problem!;
     descriptionController.text = _currentProj.description!;
     _status = _currentProj.size!;
+    _currentMilestones = _currentProj.milestones!;
+
     if (_status == "sm") {
       _value = 0;
       _statusColor = Colors.lightBlue;
@@ -153,69 +157,70 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     // }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Project Details"),
-        actions: [
-          _isEditting
-              ? Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      tooltip: 'Cancel',
-                      onPressed: () {
-                        nameController.text = _currentProj.name!;
-                        problemController.text = _currentProj.problem!;
-                        descriptionController.text = _currentProj.description!;
-                        _status = _currentProj.size!;
-                        if (_currentProj.size! == "sm") {
-                          _value = 0;
-                          _statusColor = Colors.lightBlue;
-                        } else if (_currentProj.size! == "md") {
-                          _value = 1;
-                          _statusColor = Colors.yellow;
-                        } else if (_currentProj.size! == "lg") {
-                          _value = 2;
-                          _statusColor = Colors.orange;
-                        } else if (_currentProj.size! == "xl") {
-                          _value = 3;
-                          _statusColor = Colors.green;
-                        }
-                        _dropdownValue = _currentProj.goal!;
-                        _toggleEdit();
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.check),
-                      tooltip: 'Edit Project Details',
-                      onPressed: () {
-                        _toggleEdit();
-                        _currentProj = Project(
-                          name: nameController.text,
-                          problem: problemController.text,
-                          description: descriptionController.text,
-                          size: _status,
-                          goal: _dropdownValue,
-                          milestones: milestones,
-                          user: _currentProj.user,
-                          id: _currentProj.id,
-                        );
-                        addProject(_currentProj);
-                        // Call Firebase Update
-                      },
-                    ),
-                  ],
-                )
-              : IconButton(
-                  icon: const Icon(Icons.edit),
-                  tooltip: 'Edit Project Details',
-                  onPressed: () {
-                    _toggleEdit();
-                  },
-                )
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Form(
+        appBar: AppBar(
+          title: const Text("Project Details"),
+          actions: [
+            _isEditting
+                ? Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Cancel',
+                        onPressed: () {
+                          nameController.text = _currentProj.name!;
+                          problemController.text = _currentProj.problem!;
+                          descriptionController.text =
+                              _currentProj.description!;
+                          _status = _currentProj.size!;
+                          if (_currentProj.size! == "sm") {
+                            _value = 0;
+                            _statusColor = Colors.lightBlue;
+                          } else if (_currentProj.size! == "md") {
+                            _value = 1;
+                            _statusColor = Colors.yellow;
+                          } else if (_currentProj.size! == "lg") {
+                            _value = 2;
+                            _statusColor = Colors.orange;
+                          } else if (_currentProj.size! == "xl") {
+                            _value = 3;
+                            _statusColor = Colors.green;
+                          }
+                          _dropdownValue = _currentProj.goal!;
+                          _toggleEdit();
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.check),
+                        tooltip: 'Edit Project Details',
+                        onPressed: () {
+                          _toggleEdit();
+                          _currentProj = Project(
+                            name: nameController.text,
+                            problem: problemController.text,
+                            description: descriptionController.text,
+                            size: _status,
+                            goal: _dropdownValue,
+                            milestones: milestones,
+                            user: _currentProj.user,
+                            id: _currentProj.id,
+                          );
+                          addProject(_currentProj);
+                          // Call Firebase Update
+                        },
+                      ),
+                    ],
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.edit),
+                    tooltip: 'Edit Project Details',
+                    onPressed: () {
+                      _toggleEdit();
+                    },
+                  )
+          ],
+        ),
+        body: SingleChildScrollView(
+            child: Form(
           key: _detailsFormKey,
           child: Column(
             children: [
@@ -366,8 +371,15 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 ],
               ),
               const Text("Milestones"),
-              Column(
-                children: milestoneRows,
+              Text(_currentMilestones.length.toString()),
+              SizedBox(
+                height: 150,
+                child: ListView.builder(
+                    itemCount: _currentMilestones.length,
+                    itemBuilder: (context, index) {
+                      Milestone milestone = _currentMilestones[index];
+                      return MilestoneWidget(milestone: milestone);
+                    }),
               ),
               if (_isEditting)
                 ElevatedButton(
@@ -382,7 +394,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                 children: <Widget>[
                                   ElevatedButton(
                                     onPressed: () {
-                                      debugPrint("Dialog Add Pressed");
                                       final newMilestone = Milestone(
                                           mname: 'Milestone 1',
                                           tasks: [
@@ -396,18 +407,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                                       addMilestone(_currentProj, newMilestone)
                                           .then((x) => {
                                                 Navigator.pop(context),
-                                                Navigator.pop(context, true),
                                               });
-
-                                      // milestones.add(Milestone(mname: "Test1"));
-                                      // _currentProj.milestones = milestones;
-                                      // addProject(_currentProj).then((x) => {});
-                                      // bool isUpdated = false;
-                                      // deleteProject(_currentProj).then((x) => {
-                                      //       isUpdated = true,
-                                      //       Navigator.pop(context),
-                                      //       Navigator.pop(context, isUpdated)
-                                      //     });
                                     },
                                     child: const Text("Add Milestone"),
                                   ),
@@ -441,7 +441,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                           children: <Widget>[
                             ElevatedButton(
                               onPressed: () {
-                                debugPrint("Dialog Delete Pressed");
                                 bool isUpdated = false;
                                 deleteProject(_currentProj).then((x) => {
                                       isUpdated = true,
@@ -467,8 +466,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 ),
             ],
           ),
-        ),
-      ),
-    );
+        )));
   }
 }

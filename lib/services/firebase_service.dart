@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -143,7 +145,6 @@ class Project {
   final String? size;
   final String? goal;
   final List<Milestone>? milestones;
-
   final String? user;
   final String? id;
 
@@ -186,7 +187,9 @@ class Project {
       if (description != null) "description": description,
       if (size != null) "size": size,
       if (goal != null) "goal": goal,
-      if (milestones != null) "milestones": milestones,
+      if (milestones != null)
+        "milestones":
+            milestones?.map((milestone) => milestone.toFirestore()).toList(),
       if (user != null) "user": user,
       if (id != null) "id": id,
     };
@@ -237,36 +240,43 @@ Future<void> addMilestone(Project proj, Milestone milestone) async {
 
 // Method to add projects with user
 Future<void> addProject(Project proj) async {
-  late DocumentReference docRef;
-  if (proj.id == null || proj.id == "") {
-    docRef = db
-        .collection("projects")
-        .withConverter(
-          fromFirestore: Project.fromFirestore,
-          toFirestore: (Project project, _) => project.toFirestore(),
-        )
-        .doc();
-    var newProj = Project(
-        name: proj.name,
-        problem: proj.problem,
-        description: proj.description,
-        size: proj.size,
-        goal: proj.goal,
-        user: proj.user,
-        milestones: proj.milestones,
-        id: docRef.id);
+  try {
+    late DocumentReference docRef;
+    if (proj.id == null || proj.id == "") {
+      debugPrint("Project Id was null or empty");
+      docRef = db
+          .collection("projects")
+          .withConverter(
+            fromFirestore: Project.fromFirestore,
+            toFirestore: (Project project, _) => project.toFirestore(),
+          )
+          .doc();
+      var newProj = Project(
+          name: proj.name,
+          problem: proj.problem,
+          description: proj.description,
+          size: proj.size,
+          goal: proj.goal,
+          user: proj.user,
+          milestones: proj.milestones,
+          id: docRef.id);
 
-    await docRef.set(newProj);
-  } else {
-    docRef = db
-        .collection("projects")
-        .withConverter(
-          fromFirestore: Project.fromFirestore,
-          toFirestore: (Project project, _) => project.toFirestore(),
-        )
-        .doc(proj.id);
+      await docRef.set(newProj);
+    } else {
+      docRef = db
+          .collection("projects")
+          .withConverter(
+            fromFirestore: Project.fromFirestore,
+            toFirestore: (Project project, _) => project.toFirestore(),
+          )
+          .doc(proj.id);
 
-    await docRef.set(proj);
+      await docRef
+          .set(proj)
+          .then((x) => {debugPrint("Successfully sent to Firebase")});
+    }
+  } catch (error) {
+    debugPrint("Error adding project: $error");
   }
 }
 
